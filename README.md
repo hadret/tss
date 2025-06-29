@@ -13,8 +13,8 @@ You can find accompanying blog post here:
 
 Scripts included:
 
-- [dctx](scripts/dctx)
-- [kctx](scripts/kctx)
+- [dctx](contexts/dctx)
+- [kctx](contexts/kctx)
 
 ## Feedback
 
