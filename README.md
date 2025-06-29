@@ -1,6 +1,6 @@
 # Ba Dum Tss!
 
-I started blog series called
+I started series called
 [Terrible Shell Scripting](https://chabik.com/terrible-shell-scripting-interactive-shell/)
 on my blog. As I progress with different shell scripts, going deeper in how
 terrible they are, I needed a place where I can share these snippets. That will
