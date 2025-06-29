@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check for required dependencies
+for dep in fzf kubectl; do
+  command -v "$dep" >/dev/null 2>&1 || {
+    printf "Missing dependency: %s :(\n" "$dep" >&2
+    exit 1
+  }
+done
+
+# It's a simple script, print a simple help please
+usage() {
+  printf '%s\n' "Usage: ${0##*/} [-c] [-h] [-l] [-u] [context name]
+
+FLAGS
+    -c, --current   Show current context
+    -h, --help      Print help
+    -l, --list      List all contexts
+    -u, --unset     Set default context" 1>&2
+  exit 3
+}
+
+# Check for currently set context, fallback to None if unset
+current_context=$(kubectl config current-context 2>/dev/null || printf "None\n")
+
+# Set starting fzf options
+FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS --cycle \
+                                    --reverse \
+                                    --info=inline \
+                                    --height=20% \
+                                    --prompt=\"⎈ context[$current_context] > \""
+
+case $# in
+0)
+  kubectl config use-context "$(kubectl config get-contexts -o name | fzf)"
+  ;;
+1)
+  case "$1" in
+  "-c" | "--current")
+    kubectl config current-context
+    ;;
+  "-l" | "--list")
+    kubectl config get-contexts -o name
+    ;;
+  "-u" | "--unset")
+    kubectl config unset current-context
+    ;;
+  "-h" | "--help")
+    usage
+    ;;
+  *)
+    needle=$(printf '.*%s' "$(printf '%s' "$@" |
+      sed -E 's/ +//g' |
+      sed -E 's/(.)/\1.*/g')")
+    kubectl config use-context "$(kubectl config get-contexts -o name |
+      grep "$needle"'[^/]*$' |
+      fzf -1 -0 -q "$@")"
+    ;;
+  esac
+  ;;
+*) usage ;;
+esac

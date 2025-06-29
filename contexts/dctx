@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check for required dependencies
+for dep in docker fzf jq; do
+  command -v "$dep" >/dev/null 2>&1 || {
+    printf "Missing dependency: %s :(\n" "$dep" >&2
+    exit 1
+  }
+done
+
+# It's a simple script, print a simple help please
+usage() {
+  printf '%s\n' "Usage: ${0##*/} [-c] [-d] [-h] [-l] [context name]
+
+FLAGS
+    -c, --current   Show current context
+    -d, --default   Set default context
+    -h, --help      Print help
+    -l, --list      List all contexts" 1>&2
+  exit 3
+}
+
+# Check for currently set context
+current_context=$(docker context show)
+
+# Catch other than current contexts
+non_active_contexts=$(docker context list --format=json |
+  jq -r 'select(.Current==false).Name')
+
+# Set starting fzf options
+FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS --cycle \
+                                    --reverse \
+                                    --info=inline \
+                                    --height=20% \
+                                    --prompt=\"context[$current_context] > \""
+
+case $# in
+0)
+  docker context use "$(printf '%s' "$non_active_contexts" | fzf)"
+  ;;
+1)
+  case "$1" in
+  "-c" | "--current")
+    printf '%s\n' "$current_context"
+    ;;
+  "-d" | "--default")
+    docker context use default 2>/dev/null
+    ;;
+  "-l" | "--list")
+    docker context ls -q 2>/dev/null
+    ;;
+  "-h" | "--help")
+    usage
+    ;;
+  *)
+    needle=$(printf '.*%s' "$(printf '%s' "$@" |
+      sed -E 's/ +//g' |
+      sed -E 's/(.)/\1.*/g')")
+    if ! (docker context use "$(printf '%s' "$non_active_contexts" |
+      grep "$needle"'[^/]*$' |
+      fzf -1 -0 -q "$@")") 2>/dev/null; then
+      printf '%s\n' "Currently set context: $current_context"
+    fi
+    ;;
+  esac
+  ;;
+*) usage ;;
+esac
