@@ -27,8 +27,6 @@ Scripts included:
 - [snaper](aptly/snaper)
 - [puber](aptly/puber)
 
-Scripts included:
-
 ## Feedback
 
 In case you'd like to share any feedback with me, feel free to reach out on
