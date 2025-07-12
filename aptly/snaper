@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check for required dependencies
+for dep in aptly gum; do
+  command -v "$dep" >/dev/null 2>&1 || {
+    printf "Missing dependency: %s :(\n" "$dep" >&2
+    exit 1
+  }
+done
+
+# It's a simple script, print a simple help please
+usage() {
+  printf '%s\n' "Usage: ${0##*/} [-a] [-c] [-d] [-h] [-l] [-s]
+
+FLAGS
+    -a  List all snapshots
+    -c  Create new snapshot(s)
+    -d  Drop snapshot(s)
+    -h  Print help
+    -l  List snapshots per chosen distro
+    -s  Show snapshot details" 1>&2
+  exit 3
+}
+
+# Pick a distro(s)
+pick_me_pick_me() {
+  mapfile -t distros < <(gum choose --no-limit "bookworm" "trixie" "unstable")
+}
+
+# Create snapshot
+create_snap() {
+  pick_me_pick_me
+
+  for distro in "${distros[@]}"; do
+    # Ensure gum choose did its job
+    [ -z "$distro" ] && echo "No distro was picked, exiting..." && exit 1
+
+    # Catch already existing snapshot for the distro
+    printf '\nPreparing snapshot for %s...\n' "${distro}-main"
+    mapfile -t snaps < <(aptly snapshot list -raw | grep "$distro")
+    printf '\nHere are current snaps for %s:\n' "$distro"
+    printf ' %s\n' "${snaps[@]}"
+
+    # New snapshot suggested name
+    new_snap=$distro-$(date +%Y%m%d)-1
+  
+    # Confirm whether new name is OK, based on pre-existing snapshots
+    gum confirm "Create $new_snap?" && snap_choice=true || snap_choice=false
+
+    # Ask for a new name when not happy with the default
+    if [ "$snap_choice" = false ]; then
+      new_snap=$(gum input --value="$new_snap" --header="Provide name for the new snap")
+    fi
+
+    # Create new snapshot
+    printf '\nCreating new snap %s...\n' "$new_snap"
+    aptly snapshot create "$new_snap" from repo "${distro}-main"
+    printf '%s created successfully!\n\n' "$new_snap"
+  done
+}
+
+drop_snap() {
+  pick_me_pick_me
+
+  for distro in "${distros[@]}"; do
+    # Ensure gum choose did its job
+    [ -z "$distro" ] && echo "No distro was picked, exiting..." && exit 1
+
+    # Grab currently published snapshot
+    current=$(aptly publish list -json \
+              | jq -r --arg distro "$distro" '.[] | select(.Distribution == $distro) | .Sources[].Name')
+
+    # Fetch all available snapshots and remove currently set one
+    mapfile -t snaps < <(aptly snapshot list -raw | grep "^$distro" | grep -v "$current")
+
+    # Print message if no snapshots available to drop
+    if [ -z "${snaps[*]}" ]; then
+      echo "No snapshots available to drop for $distro!"
+    # Pick & drop'em otherwise
+    else
+      snaps_were_made=$(gum choose --header="Drop snapshots for $distro:" --no-limit "${snaps[@]}")
+
+      # Check whether anything got selected for removal
+      if [ -z "$snaps_were_made" ]; then
+        echo "No snapshot selected for dropping for $distro!"
+      # Remove all the things
+      else
+        echo "$snaps_were_made" | xargs -n1 aptly snapshot drop
+      fi
+    fi
+  done
+}
+
+# Show snapshot details
+show_snap() {
+  aptly snapshot show "$(gum choose $(aptly snapshot list -raw))"
+}
+
+# List available snaps per distro
+list_snaps() {
+  pick_me_pick_me
+
+  for distro in "${distros[@]}"; do
+    # Ensure gum choose did its job
+    [ -z "$distro" ] && echo "No distro was picked, exiting..." && exit 1
+
+    aptly snapshot list -raw | grep "$distro"
+  done
+}
+
+# List all available snaps
+all_snaps() {
+  aptly snapshot list
+}
+
+case $# in
+0) create_snap ;;
+1)
+    case "$1" in
+    -c) create_snap ;;
+    -d | -r) drop_snap ;;
+    -s) show_snap ;;
+    -l) list_snaps ;;
+    -a) all_snaps ;;
+    -h) usage ;;
+    *) usage ;;
+    esac
+    ;;
+*) usage ;;
+esac

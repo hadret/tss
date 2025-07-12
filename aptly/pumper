@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check for required dependencies
+for dep in aptly gum; do
+  command -v "$dep" >/dev/null 2>&1 || {
+    printf "Missing dependency: %s :(\n" "$dep" >&2
+    exit 1
+  }
+done
+
+# It's a simple script, print a simple help please
+usage() {
+  printf '%s\n' "Usage: ${0##*/} [-h] [-i] [-l] [-p] [-s]
+
+FLAGS
+    -h  Print help
+    -i  Import file or folder to repository
+    -l  List repositories
+    -p  Show repository details with packages
+    -s  Show repository details" 1>&2
+  exit 3
+}
+
+# Pick a distro(s)
+pick_me_pick_me() {
+  mapfile -t distros < <(gum choose --no-limit "bookworm" "trixie" "unstable")
+}
+
+pump_it_up() {
+  pick_me_pick_me
+
+  for distro in "${distros[@]}"; do
+    # Ensure gum choose did its job
+    [ -z "$distro" ] && echo "No distro was picked, exiting..." && exit 1
+  
+    printf 'Importing to repo %s...\n' "${distro}-main"
+    import=$(gum file --directory --file ~/incoming)
+    aptly repo add "${distro}-main" "${import}"
+    printf 'Package(s) added successfully!\n\n'
+  done
+}
+
+list_repo() {
+  aptly repo list
+}
+
+show_repo() {
+  aptly repo show $(gum choose $(aptly repo list -raw))
+}
+
+show_pkg() {
+  aptly repo show -with-packages $(gum choose $(aptly repo list -raw))
+}
+
+case $# in
+0) pump_it_up ;;
+1)
+    case "$1" in
+    -i) pump_it_up ;;
+    -l) list_repo ;;
+    -s) show_repo ;;
+    -p) show_pkg ;;
+    -h) usage ;;
+    *) usage ;;
+    esac
+    ;;
+*) usage ;;
+esac

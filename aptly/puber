@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check for required dependencies
+for dep in aptly gum jq; do
+  command -v "$dep" >/dev/null 2>&1 || {
+    printf "Missing dependency: %s :(\n" "$dep" >&2
+    exit 1
+  }
+done
+
+# It's a simple script, print a simple help please
+usage() {
+  printf '%s\n' "Usage: ${0##*/} [-h] [-l] [-s]
+
+FLAGS
+    -h  Print help
+    -l  List published stuff
+    -s  Switch to another snapshot" 1>&2
+  exit 3
+}
+
+# Pick a distro(s)
+pick_me_pick_me() {
+  mapfile -t distros < <(gum choose --no-limit "bookworm" "trixie" "unstable")
+}
+
+switch_pub() {
+  pick_me_pick_me
+
+  for distro in "${distros[@]}"; do
+    # Ensure gum choose did its job
+    [ -z "$distro" ] && echo "No distro was picked, exiting..." && exit 1
+
+    # Grab currently published snapshot
+    current=$(aptly publish list -json \
+              | jq -r --arg distro "$distro" '.[] | select(.Distribution == $distro) | .Sources[].Name')
+
+    # Fetch all available snapshots and remove currently set one
+    mapfile -t snaps < <(aptly snapshot list -raw | grep "^$distro" | grep -v "$current")
+
+    # Ensure there are snapshots available
+    if [ -z "${snaps[*]}" ]; then 
+      echo "No snapshots available for switch for $distro!"
+    # Choose snapshot and switch to it
+    else
+      switch_me_up=$(gum choose --limit=1 < <(printf '%s\n' "${snaps[@]}"))
+      aptly publish switch "$distro" debian "$switch_me_up"
+    fi
+  done
+}
+
+list_pub() {
+  aptly publish list
+}
+
+case $# in
+0) switch_pub ;;
+1)
+    case "$1" in
+    -s) switch_pub ;;
+    -l) list_pub ;;
+    -h) usage ;;
+    *) usage ;;
+    esac
+    ;;
+*) usage ;;
+esac

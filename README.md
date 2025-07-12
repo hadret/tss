@@ -16,6 +16,19 @@ Scripts included:
 - [dctx](contexts/dctx)
 - [kctx](contexts/kctx)
 
+## Aptly helper scripts
+
+You can find accompanying blog post here:
+[Aptly for own Debian repository](https://chabik.com/aptly-for-own-debian-repository/)
+
+Scripts included:
+
+- [pumper](aptly/pumper)
+- [snaper](aptly/snaper)
+- [puber](aptly/puber)
+
+Scripts included:
+
 ## Feedback
 
 In case you'd like to share any feedback with me, feel free to reach out on
