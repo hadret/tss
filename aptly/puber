@@ -37,7 +37,7 @@ switch_pub() {
               | jq -r --arg distro "$distro" '.[] | select(.Distribution == $distro) | .Sources[].Name')
 
     # Fetch all available snapshots and remove currently set one
-    mapfile -t snaps < <(aptly snapshot list -raw | grep "^$distro" | grep -v "$current")
+    mapfile -t snaps < <(aptly snapshot list -raw | grep "^$distro" | grep -v "$current" | sort -r)
 
     # Ensure there are snapshots available
     if [ -z "${snaps[*]}" ]; then 
