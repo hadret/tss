@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check for required dependencies
+for dep in fzf kubectl; do
+  command -v "$dep" &>/dev/null || {
+    echo >&2 "Missing dependency: $dep :("
+    exit 1
+  }
+done
+
+# Set starting fzf options
+FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS --cycle --reverse --info=inline --height=100%"
+
+# Check for optional dependencies and set default fallback
+kc_print=$(command -v bat &>/dev/null && echo "bat -f -p -lyaml" || echo "less -f")
+kc_logs=$(command -v stern &>/dev/null && echo "stern" || echo "kubectl logs --follow --all-containers --tail=1000")
+
+# Setup context
+if kubectl config current-context &>/dev/null; then
+  kctx=$(kubectl config current-context | sed 's/-context$//')
+else
+  kctx=$(kubectl config use-context "$(kubectl config get-contexts -o name | fzf --prompt="⎈ contex > ")" &>/dev/null && kubectl config current-context | sed 's/-context//')
+fi
+
+# Main koc function
+main() {
+  resource=$(printf '%s\n' pod \
+    configmap \
+    cronjob \
+    deployments \
+    ingress \
+    job \
+    node \
+    persistentvolume \
+    persistentvolumeclaim \
+    replicaset \
+    secret \
+    service \
+    statefulset |
+    fzf --prompt="⎈ resource > " |
+    xargs)
+
+  case "$resource" in
+  "")
+    echo "Resource can't be empty"
+    exit 2
+    ;;
+  "node" | "persistentvolume" | "statefulset")
+    preview="$kc_print <(kubectl describe {1})"
+    bind_enter="execute:(kubectl describe {1} | $kc_print)"
+    ;;
+  *)
+    filter="^default"
+    preview="$kc_print <(kubectl describe --namespace {1} {2})"
+    bind_enter="execute:(kubectl describe --namespace {1} {2} | $kc_print)"
+    ;;
+  esac
+
+  # Default query, let's kick this off
+  query="kubectl get --all-namespaces --show-kind $resource"
+  : | fzf \
+    --preview "$preview" \
+    --preview-window 'down:60%:hidden' \
+    --query "${filter:-}" \
+    --prompt "⎈ $kctx($resource) > " \
+    --input-border rounded \
+    --color header:italic \
+    --header $'Describe <enter> │ Logs <^-l> │ Shell <^-s> │ Reload <^-r> │ Clear Query <^-q> │ Delete <^-x> │ Preview <^-/>\n\n' \
+    --header-first \
+    --header-lines 1 \
+    --bind "start:reload($query)" \
+    --bind "focus:transform-preview-label:(echo [ {2} ])" \
+    --bind "enter:$bind_enter" \
+    --bind "ctrl-/:change-preview-window(50%|right|)+transform-preview-label:(echo [ {2} ])" \
+    --bind "ctrl-c:become($0)" \
+    --bind "ctrl-e:execute:(kubectl events | $kc_print)" \
+    --bind "ctrl-l:execute:($kc_logs --namespace {1} {2})" \
+    --bind "ctrl-q:reload($query)+clear-query" \
+    --bind "ctrl-r:reload($query)" \
+    --bind 'ctrl-s:execute:kubectl exec -it --namespace {1} {2} -- sh' \
+    --bind 'ctrl-u:preview-half-page-up,ctrl-d:preview-half-page-down' \
+    --bind "ctrl-x:execute:kubectl delete --namespace {1} {2}" \
+    --bind "ctrl-y:execute:(kubectl get --namespace {1} {2} -o yaml | $kc_print)"
+}
+
+# Run all the things
+main

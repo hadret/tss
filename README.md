@@ -27,6 +27,15 @@ Scripts included:
 - [snaper](aptly/snaper)
 - [puber](aptly/puber)
 
+## Kubernetes
+
+You can find accompanying blog post here:
+[Terrible Shell Scripting: Kuberntes](https://chabik.com/terrible-shell-scripting-contexts/)
+
+Scripts included:
+
+- [koc](kubernetes/koc)
+
 ## Feedback
 
 In case you'd like to share any feedback with me, feel free to reach out on
