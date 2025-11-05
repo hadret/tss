@@ -30,7 +30,7 @@ Scripts included:
 ## Kubernetes
 
 You can find accompanying blog post here:
-[Terrible Shell Scripting: Kuberntes](https://chabik.com/terrible-shell-scripting-contexts/)
+[Terrible Shell Scripting: Kuberntes](https://chabik.com/terrible-shell-scripting-kubernetes)
 
 Scripts included:
 
