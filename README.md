@@ -6,6 +6,31 @@ on my blog. As I progress with different shell scripts, going deeper in how
 terrible they are, I needed a place where I can share these snippets. That will
 do, I guess 🤷🏻‍♂️
 
+<details>
+<summary>Changelog</summary>
+
+### 0.3.1 <small>November 23, 2025</small>
+
+- Added images showcasing the scripts
+- Added changelog for tracking
+
+### 0.3.0 <small>November 5, 2025</small>
+
+- Added Kubernetes script `koc`
+
+### 0.2.1 <small>August 25, 2025</small>
+
+- Switched snapshots sorting order in `puber`
+
+### 0.2.0 <small>July 12, 2025</small>
+
+- Added Aptly scripts `pumper`, `snaper` & `puber`
+
+### 0.1.0 <small>June 29, 2025</small>
+
+- Initial release
+</details>
+
 ## Contexts
 
 You can find accompanying blog post here:
