@@ -11,6 +11,8 @@ do, I guess 🤷🏻‍♂️
 You can find accompanying blog post here:
 [Terrible Shell Scripting: Contexts](https://chabik.com/terrible-shell-scripting-contexts/)
 
+![kctx](./img/kctx.jpg)
+
 Scripts included:
 
 - [dctx](contexts/dctx)
@@ -20,6 +22,8 @@ Scripts included:
 
 You can find accompanying blog post here:
 [Aptly for own Debian repository](https://chabik.com/aptly-for-own-debian-repository/)
+
+![pumper](./img/pumper.jpg)
 
 Scripts included:
 
@@ -31,6 +35,8 @@ Scripts included:
 
 You can find accompanying blog post here:
 [Terrible Shell Scripting: Kuberntes](https://chabik.com/terrible-shell-scripting-kubernetes)
+
+![koc](./img/koc.jpg)
 
 Scripts included:
 
